@@ -140,27 +140,23 @@ end
 local function withdraw(card)
     term.clear()
     term.setCursorPos(1, 1)
-    print("Beloep (kr):")
-    local amount = tonumber(read())
+    print("Antall diamanter:")
+    local diamonds = tonumber(read())
 
-    if not amount or amount <= 0 then
-        print("Ugyldig beloep!")
+    if not diamonds or diamonds <= 0 or math.floor(diamonds) ~= diamonds then
+        print("Ugyldig antall!")
         sleep(2)
         return
     end
 
-    if amount % DIAMOND_VALUE ~= 0 then
-        print("Beloep maa vaere multiplum av " .. DIAMOND_VALUE)
-        sleep(2)
-        return
-    end
+    local amount = diamonds * DIAMOND_VALUE
 
     rednet.send(SERVER_ID, {type = "withdraw", card = tostring(card), amount = amount})
     local ok = serverReceive()
 
     if ok then
         rednet.send(TURTLE_ID, {type = "give", amount = amount / DIAMOND_VALUE})
-        print("Tok ut " .. amount .. " kr")
+        print("Tok ut " .. diamonds .. " diamanter")
         sleep(2)
     else
         print("Ikke nok penger!")
