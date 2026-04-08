@@ -5,7 +5,7 @@ local FILE = "bank.db"
 -- LOAD
 local function load()
     if not fs.exists(FILE) then return {} end
-    local f = fs.open(FILE,"r")
+    local f = fs.open(FILE, "r")
     local data = textutils.unserialize(f.readAll())
     f.close()
     return data or {}
@@ -13,38 +13,55 @@ end
 
 -- SAVE
 local function save(db)
-    local f = fs.open(FILE,"w")
+    local f = fs.open(FILE, "w")
     f.write(textutils.serialize(db))
     f.close()
 end
 
 local db = load()
 
-print("Bank server startet")
+print("Bank server startet (ID: " .. os.getComputerID() .. ")")
 
 while true do
-    local sender,msg = rednet.receive()
+    local sender, msg = rednet.receive()
 
-    if msg.type == "get" then
+    if type(msg) ~= "table" or not msg.type then
+        -- Ignorer ugyldige meldinger
+    elseif msg.type == "get" then
         rednet.send(sender, db[msg.card])
 
     elseif msg.type == "create" then
-        db[msg.card] = {balance=0,pin=msg.pin}
-        save(db)
-        rednet.send(sender,true)
+        if db[msg.card] then
+            -- Kort finnes allerede
+            rednet.send(sender, false)
+        else
+            db[msg.card] = {balance = 0, pin = msg.pin}
+            save(db)
+            print("Nytt kort registrert: " .. msg.card)
+            rednet.send(sender, true)
+        end
 
     elseif msg.type == "deposit" then
-        db[msg.card].balance += msg.amount
-        save(db)
-        rednet.send(sender,true)
+        if not db[msg.card] then
+            rednet.send(sender, false)
+        else
+            db[msg.card].balance = db[msg.card].balance + msg.amount
+            save(db)
+            print("Innskudd: " .. msg.card .. " +" .. msg.amount .. " kr")
+            rednet.send(sender, true)
+        end
 
     elseif msg.type == "withdraw" then
-        if db[msg.card].balance >= msg.amount then
-            db[msg.card].balance -= msg.amount
+        if not db[msg.card] then
+            rednet.send(sender, false)
+        elseif db[msg.card].balance >= msg.amount then
+            db[msg.card].balance = db[msg.card].balance - msg.amount
             save(db)
-            rednet.send(sender,true)
+            print("Uttak: " .. msg.card .. " -" .. msg.amount .. " kr")
+            rednet.send(sender, true)
         else
-            rednet.send(sender,false)
+            print("Avvist uttak (ikke nok penger): " .. msg.card)
+            rednet.send(sender, false)
         end
     end
 end

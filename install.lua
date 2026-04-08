@@ -6,19 +6,21 @@ local files = {
     "turtle_bank"
 }
 
-for _,file in pairs(files) do
-    print("Laster ned "..file)
+for _, file in pairs(files) do
+    print("Laster ned " .. file .. "...")
 
-    local res = http.get(base..file..".lua")
+    local ok, res = pcall(http.get, base .. file .. ".lua")
 
-    if res then
-        local f = fs.open(file,"w")
+    if ok and res then
+        local f = fs.open(file .. ".lua", "w")
         f.write(res.readAll())
         f.close()
         res.close()
+        print("  OK: " .. file .. ".lua")
     else
-        print("Feil med "..file)
+        print("  FEIL: Kunne ikke laste ned " .. file)
     end
 end
 
-print("Ferdig!")
+print("")
+print("Ferdig! Huusk aa sette riktige Computer-IDer i atm.lua")
