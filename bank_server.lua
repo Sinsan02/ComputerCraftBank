@@ -63,5 +63,18 @@ while true do
             print("Avvist uttak (ikke nok penger): " .. msg.card)
             rednet.send(sender, false)
         end
+    elseif msg.type == "transfer" then
+        if not db[msg.from] then
+            rednet.send(sender, {ok=false, reason="Betalar sitt kort finst ikkje"})
+        elseif not db[msg.to] then
+            rednet.send(sender, {ok=false, reason="Mottakar sitt kort finst ikkje"})
+        elseif db[msg.from].balance < msg.amount then
+            rednet.send(sender, {ok=false, reason="Ikkje nok pengar"})
+        else
+            db[msg.from].balance = db[msg.from].balance - msg.amount
+            db[msg.to].balance = db[msg.to].balance + msg.amount
+            save(db)
+            print("Overføring: " .. msg.from .. " -> " .. msg.to .. " " .. msg.amount .. " kr")
+            rednet.send(sender, {ok=true})
+        end
     end
-end
