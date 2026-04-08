@@ -4,6 +4,7 @@ local files = {
     "bank_server",
     "atm",
     "turtle_bank"
+    "betaling"
 }
 
 for _, file in pairs(files) do
