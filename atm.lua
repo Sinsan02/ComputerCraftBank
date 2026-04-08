@@ -185,11 +185,49 @@ while true do
         local _, data = rednet.receive(5)
 
         if not data then
-            print("Kortet er ikke registrert.")
-            print("Lag et nytt kort fra menyeni.")
-            sleep(2)
-            -- La dem lage kort uten PIN-sjekk
-            createCard()
+            -- Nytt kort uten konto -- registrer direkte
+            term.clear()
+            term.setCursorPos(1, 1)
+            print("Nytt kort oppdaget!")
+            print("Velg ein PIN-kode:")
+            local pin1 = read("*")
+            print("Skriv PIN ein gong til:")
+            local pin2 = read("*")
+
+            if pin1 ~= pin2 then
+                print("PIN-kodene er ikkje like. Prøv igjen.")
+                sleep(2)
+            else
+                rednet.send(SERVER_ID, {type = "create", card = tostring(card), pin = pin1})
+                local _, ok = rednet.receive(5)
+                if ok then
+                    print("Konto oppretta!")
+                    sleep(2)
+                    data = {balance = 0, pin = pin1}
+                    -- Fall gjennom til menyen
+                    while true do
+                        menu(data.balance)
+                        local x, y = click()
+
+                        if y >= 5 and y <= 7 and x >= 2 and x <= 12 then
+                            deposit(card)
+                        elseif y >= 5 and y <= 7 and x >= 15 and x <= 25 then
+                            withdraw(card)
+                        elseif y >= 10 and y <= 12 and x >= 2 and x <= 12 then
+                            createCard()
+                        elseif y >= 10 and y <= 12 and x >= 15 and x <= 25 then
+                            break
+                        end
+
+                        rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
+                        _, data = rednet.receive(5)
+                        if not data then break end
+                    end
+                else
+                    print("Noko gjekk gale. Prøv igjen.")
+                    sleep(2)
+                end
+            end
         else
             local pin = askPIN()
 
