@@ -78,3 +78,4 @@ while true do
             rednet.send(sender, {ok=true})
         end
     end
+end
