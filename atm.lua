@@ -1,5 +1,5 @@
 -- KONFIGURASJON
-local SERVER_ID = 1       -- Computer ID til bank_server
+local SERVER_ID = 5       -- Computer ID til bank_server
 local TURTLE_ID = 2       -- Computer ID til turtle_bank
 local DIAMOND_VALUE = 1000
 
@@ -21,6 +21,18 @@ end
 local function click()
     local _, _, x, y = os.pullEvent("mouse_click")
     return x, y
+end
+
+-- Motta svar KUN frå bank-serveren, ignorer alt anna
+local function serverReceive()
+    local deadline = os.clock() + 5
+    while os.clock() < deadline do
+        local sender, msg = rednet.receive(1)
+        if sender == SERVER_ID then
+            return msg
+        end
+    end
+    return nil
 end
 
 local function getCard()
@@ -75,7 +87,7 @@ local function createCard()
     drive.setDiskLabel("Bankkort #" .. id)
 
     rednet.send(SERVER_ID, {type = "create", card = tostring(id), pin = pin})
-    rednet.receive(5)
+    serverReceive()
 
     print("Kort laget!")
     sleep(2)
@@ -114,7 +126,7 @@ local function deposit(card)
     local money = diamonds * DIAMOND_VALUE
 
     rednet.send(SERVER_ID, {type = "deposit", card = tostring(card), amount = money})
-    local _, ok = rednet.receive(5)
+    local ok = serverReceive()
 
     if ok then
         print("Satt inn " .. money .. " kr (" .. diamonds .. " diamanter)")
@@ -144,7 +156,7 @@ local function withdraw(card)
     end
 
     rednet.send(SERVER_ID, {type = "withdraw", card = tostring(card), amount = amount})
-    local _, ok = rednet.receive(5)
+    local ok = serverReceive()
 
     if ok then
         rednet.send(TURTLE_ID, {type = "give", amount = amount / DIAMOND_VALUE})
@@ -167,8 +179,7 @@ local function menu(balance)
 
     button(2, 5, 10, 2, "Sett inn", colors.green, colors.white)
     button(15, 5, 10, 2, "Ta ut", colors.red, colors.white)
-    button(2, 10, 10, 2, "Lag kort", colors.blue, colors.white)
-    button(15, 10, 10, 2, "Avslutt", colors.gray, colors.white)
+    button(2, 10, 10, 2, "Avslutt", colors.gray, colors.white)
 end
 
 -- MAIN
@@ -182,7 +193,7 @@ while true do
 
     if card then
         rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
-        local _, data = rednet.receive(5)
+        local data = serverReceive()
 
         if not data then
             -- Nytt kort uten konto -- registrer direkte
@@ -199,7 +210,7 @@ while true do
                 sleep(2)
             else
                 rednet.send(SERVER_ID, {type = "create", card = tostring(card), pin = pin1})
-                local _, ok = rednet.receive(5)
+                local ok = serverReceive()
                 if ok then
                     print("Konto oppretta!")
                     sleep(2)
@@ -214,13 +225,11 @@ while true do
                         elseif y >= 5 and y <= 7 and x >= 15 and x <= 25 then
                             withdraw(card)
                         elseif y >= 10 and y <= 12 and x >= 2 and x <= 12 then
-                            createCard()
-                        elseif y >= 10 and y <= 12 and x >= 15 and x <= 25 then
                             break
                         end
 
                         rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
-                        _, data = rednet.receive(5)
+                        data = serverReceive()
                         if not data then break end
                     end
                 else
@@ -243,15 +252,12 @@ while true do
                         withdraw(card)
 
                     elseif y >= 10 and y <= 12 and x >= 2 and x <= 12 then
-                        createCard()
-
-                    elseif y >= 10 and y <= 12 and x >= 15 and x <= 25 then
                         break
                     end
 
                     -- Oppdater saldo
                     rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
-                    _, data = rednet.receive(5)
+                    data = serverReceive()
                     if not data then break end
                 end
             else
