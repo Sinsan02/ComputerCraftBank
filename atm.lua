@@ -2,13 +2,13 @@
 os.pullEvent = os.pullEventRaw
 
 -- KONFIGURASJON
-local SERVER_ID = 11       -- Computer ID til bank_server
+local SERVER_ID = 11      -- Computer ID til bank_server
 local TURTLE_ID = 2       -- Computer ID til turtle_bank
 local DIAMOND_VALUE = 1000
 
 rednet.open("top")
 
--- Skjermstorrelse (standard CC: 51x19)
+-- Skjermstørrelse (standard CC: 51x19)
 local W, H = term.getSize()
 
 -- Farger
@@ -26,10 +26,15 @@ local BTN_W = 22
 local BTN_H = 2
 local BTN_X = math.floor((W - BTN_W) / 2) + 1
 
--- Knapp Y-posisjoner
-local Y_DEPOSIT  = 8
-local Y_WITHDRAW = 12
-local Y_EXIT     = 16
+-- Y-posisjoner: normalmeny (4 knapper)
+local Y_DEPOSIT    = 6
+local Y_WITHDRAW   = 9
+local Y_CHANGEPIN  = 12
+local Y_EXIT       = 15
+
+-- Y-posisjoner: nytt-kort-meny (2 knapper)
+local Y_CREATE     = 8
+local Y_EXIT_NEW   = 13
 
 -- ─── UI-HJELPERE ──────────────────────────────────────────────────────────────
 
@@ -40,9 +45,7 @@ local function clearScreen()
 end
 
 local function drawTitle()
-    -- Tre-rads orange banner
     paintutils.drawFilledBox(1, 1, W, 3, COL_TITLE_BG)
-    -- "A T M" sentrert på rad 2
     local title = "A  T  M"
     local tx = math.floor((W - #title) / 2) + 1
     term.setBackgroundColor(COL_TITLE_BG)
@@ -58,19 +61,15 @@ local function drawBalance(balance)
     local tx = math.floor((W - #text) / 2) + 1
     term.setBackgroundColor(COL_BG)
     term.setTextColor(COL_BALANCE)
-    term.setCursorPos(tx, 5)
+    term.setCursorPos(tx, 4)
     term.write(text)
     term.setBackgroundColor(COL_BG)
     term.setTextColor(COL_TEXT)
 end
 
--- Tegner en knapp med skygge-effekt
 local function drawButton(y, text)
-    -- Skygge (brun, forskjøvet 1 til høyre og 1 ned)
     paintutils.drawFilledBox(BTN_X + 1, y + 1, BTN_X + BTN_W, y + BTN_H, COL_SHADOW)
-    -- Hovedknapp (oransje)
     paintutils.drawFilledBox(BTN_X, y, BTN_X + BTN_W - 1, y + BTN_H - 1, COL_BTN)
-    -- Tekst sentrert på øvre rad av knappen
     local tx = BTN_X + math.floor((BTN_W - #text) / 2)
     term.setBackgroundColor(COL_BTN)
     term.setTextColor(COL_BTN_TXT)
@@ -80,7 +79,6 @@ local function drawButton(y, text)
     term.setTextColor(COL_TEXT)
 end
 
--- Sjekk om klikk traff en knapp
 local function inButton(cx, cy, btnY)
     return cy >= btnY and cy <= btnY + BTN_H - 1
        and cx >= BTN_X and cx <= BTN_X + BTN_W - 1
@@ -91,15 +89,22 @@ local function click()
     return x, y
 end
 
+local function writeCentered(y, text, color)
+    term.setBackgroundColor(COL_BG)
+    term.setTextColor(color or COL_TEXT)
+    local tx = math.floor((W - #text) / 2) + 1
+    term.setCursorPos(tx, y)
+    term.write(text)
+    term.setTextColor(COL_TEXT)
+end
+
 -- ─── NETTVERK ─────────────────────────────────────────────────────────────────
 
 local function serverReceive()
     local deadline = os.clock() + 5
     while os.clock() < deadline do
         local sender, msg = rednet.receive(1)
-        if sender == SERVER_ID then
-            return msg
-        end
+        if sender == SERVER_ID then return msg end
     end
     return nil
 end
@@ -108,72 +113,72 @@ local function turtleReceive()
     local deadline = os.clock() + 5
     while os.clock() < deadline do
         local sender, msg = rednet.receive(1)
-        if sender == TURTLE_ID then
-            return msg
-        end
+        if sender == TURTLE_ID then return msg end
     end
     return nil
 end
 
 -- ─── KORT ─────────────────────────────────────────────────────────────────────
 
-local function getCard()
-    local drive = peripheral.find("drive")
+local function getDrive()
+    return peripheral.find("drive")
+end
+
+local function getCard(drive)
     if not drive then return nil end
     if not drive.isDiskPresent() then return nil end
     return drive.getDiskID()
 end
 
--- ─── SKJERMAR ─────────────────────────────────────────────────────────────────
+-- ─── SKJERMHJELPER ────────────────────────────────────────────────────────────
 
 local function showMessage(lines, delay)
     clearScreen()
     drawTitle()
-    term.setBackgroundColor(COL_BG)
-    term.setTextColor(COL_TEXT)
     local startY = math.floor((H - #lines) / 2) + 1
     for i, line in ipairs(lines) do
-        local tx = math.floor((W - #line) / 2) + 1
-        term.setCursorPos(tx, startY + i - 1)
-        term.write(line)
+        writeCentered(startY + i - 1, line)
     end
     sleep(delay or 2)
 end
 
-local function askPIN()
+local function askPIN(prompt)
     clearScreen()
     drawTitle()
+    local p = prompt or "Skriv PIN-kode:"
+    writeCentered(9, p)
+    term.setCursorPos(math.floor(W / 2) - 1, 11)
     term.setBackgroundColor(COL_BG)
-    term.setTextColor(COL_TEXT)
-    local prompt = "Skriv PIN-kode:"
-    term.setCursorPos(math.floor((W - #prompt) / 2) + 1, 9)
-    term.write(prompt)
-    term.setCursorPos(math.floor(W / 2), 11)
+    term.setTextColor(COL_BALANCE)
     return read("*")
+end
+
+local function askText(prompt)
+    clearScreen()
+    drawTitle()
+    writeCentered(9, prompt)
+    term.setCursorPos(math.floor(W / 2) - 6, 11)
+    term.setBackgroundColor(COL_BG)
+    term.setTextColor(COL_BALANCE)
+    return read()
 end
 
 local function askNumber(prompt)
     clearScreen()
     drawTitle()
+    writeCentered(9, prompt)
+    term.setCursorPos(math.floor(W / 2) - 1, 11)
     term.setBackgroundColor(COL_BG)
-    term.setTextColor(COL_TEXT)
-    term.setCursorPos(math.floor((W - #prompt) / 2) + 1, 9)
-    term.write(prompt)
-    term.setCursorPos(math.floor(W / 2), 11)
+    term.setTextColor(COL_BALANCE)
     return tonumber(read())
 end
 
--- ─── OPERASJONAR ──────────────────────────────────────────────────────────────
+-- ─── OPERASJONER ──────────────────────────────────────────────────────────────
 
 local function deposit(card)
-    -- Vis ventemelding mens turtle teller
     clearScreen()
     drawTitle()
-    local wait = "Teller diamanter i turtle..."
-    term.setBackgroundColor(COL_BG)
-    term.setTextColor(COL_TEXT)
-    term.setCursorPos(math.floor((W - #wait) / 2) + 1, 10)
-    term.write(wait)
+    writeCentered(10, "Teller diamanter i turtle...")
 
     rednet.send(TURTLE_ID, {type = "deposit"})
     local diamonds = turtleReceive()
@@ -182,9 +187,8 @@ local function deposit(card)
         showMessage({"Ingen respons fra turtle!"})
         return
     end
-
     if diamonds == 0 then
-        showMessage({"Ingen diamanter i turtle!"})
+        showMessage({"Ingen diamanter i turtle!", "", "(Legg diamanter i slot 1)"})
         return
     end
 
@@ -193,11 +197,7 @@ local function deposit(card)
     local ok = serverReceive()
 
     if ok then
-        showMessage({
-            "Innskudd vellykket!",
-            "",
-            diamonds .. " diamanter = " .. money .. " kr"
-        })
+        showMessage({"Innskudd vellykket!", "", diamonds .. " diamanter = " .. money .. " kr"})
     else
         showMessage({"Feil under innskudd!"})
     end
@@ -216,84 +216,94 @@ local function withdraw(card)
     local ok = serverReceive()
 
     if ok then
-        rednet.send(TURTLE_ID, {type = "give", amount = amount / DIAMOND_VALUE})
-        showMessage({
-            "Uttak vellykket!",
-            "",
-            diamonds .. " diamanter utbetalt"
-        })
+        rednet.send(TURTLE_ID, {type = "give", amount = diamonds})
+        showMessage({"Uttak vellykket!", "", diamonds .. " diamanter utbetalt"})
     else
         showMessage({"Ikke nok penger!"})
     end
 end
 
--- ─── MENY ─────────────────────────────────────────────────────────────────────
+local function changePin(card, data)
+    local old = askPIN("Skriv nåværende PIN:")
+    if old ~= data.pin then
+        showMessage({"Feil PIN-kode!"})
+        return data
+    end
 
-local function menu(balance)
-    clearScreen()
-    drawTitle()
-    drawBalance(balance)
-    drawButton(Y_DEPOSIT,  "Sett inn")
-    drawButton(Y_WITHDRAW, "Ta ut")
-    drawButton(Y_EXIT,     "Avslutt")
+    local new1 = askPIN("Velg ny PIN-kode:")
+    local new2 = askPIN("Gjenta ny PIN-kode:")
+
+    if new1 ~= new2 then
+        showMessage({"PIN-kodene er ikke like."})
+        return data
+    end
+
+    rednet.send(SERVER_ID, {type = "changepin", card = tostring(card), newpin = new1})
+    local ok = serverReceive()
+
+    if ok then
+        showMessage({"PIN-kode endret!"})
+        data.pin = new1
+    else
+        showMessage({"Noe gikk galt."})
+    end
+    return data
 end
 
+-- ─── MENYER ───────────────────────────────────────────────────────────────────
+
+-- Normalmeny for eksisterende kort (4 knapper)
 local function runMenu(card, data)
     while true do
-        menu(data.balance)
+        clearScreen()
+        drawTitle()
+        drawBalance(data.balance)
+        drawButton(Y_DEPOSIT,   "Sett inn")
+        drawButton(Y_WITHDRAW,  "Ta ut")
+        drawButton(Y_CHANGEPIN, "Bytt PIN")
+        drawButton(Y_EXIT,      "Avslutt")
+
         local x, y = click()
 
         if inButton(x, y, Y_DEPOSIT) then
             deposit(card)
         elseif inButton(x, y, Y_WITHDRAW) then
             withdraw(card)
+        elseif inButton(x, y, Y_CHANGEPIN) then
+            data = changePin(card, data)
         elseif inButton(x, y, Y_EXIT) then
             break
         end
 
         -- Oppdater saldo fra serveren
         rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
-        data = serverReceive()
-        if not data then break end
+        local fresh = serverReceive()
+        if not fresh then break end
+        data.balance = fresh.balance
     end
 end
 
--- ─── HOVUDLOOP ────────────────────────────────────────────────────────────────
+-- Nytt-kort-meny for ukjente kort (2 knapper)
+local function runNewCardMenu(card, drive)
+    while true do
+        clearScreen()
+        drawTitle()
+        writeCentered(5, "Nytt kort oppdaget!", COL_BALANCE)
+        drawButton(Y_CREATE,  "Lag kort")
+        drawButton(Y_EXIT_NEW, "Avslutt")
 
-while true do
-    clearScreen()
-    drawTitle()
-    term.setBackgroundColor(COL_BG)
-    term.setTextColor(COL_TEXT)
-    local msg = "Sett inn bankkort (disk)..."
-    term.setCursorPos(math.floor((W - #msg) / 2) + 1, 10)
-    term.write(msg)
+        local x, y = click()
 
-    sleep(1)
-    local card = getCard()
+        if inButton(x, y, Y_CREATE) then
+            -- Be om navn til disken
+            local label = askText("Velg navn på kortet:")
+            if label and #label > 0 then
+                drive.setDiskLabel(label)
+            end
 
-    if card then
-        rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
-        local data = serverReceive()
-
-        if not data then
-            -- Nytt kort – registrer
-            clearScreen()
-            drawTitle()
-            term.setBackgroundColor(COL_BG)
-            term.setTextColor(COL_TEXT)
-            term.setCursorPos(math.floor(W / 2) - 9, 6)
-            term.write("Nytt kort oppdaget!")
-
-            term.setCursorPos(math.floor(W / 2) - 8, 8)
-            term.write("Velg en PIN-kode:")
-            term.setCursorPos(math.floor(W / 2) - 1, 9)
-            local pin1 = read("*")
-
-            term.setCursorPos(math.floor(W / 2) - 9, 11)
-            term.write("Gjenta PIN-koden:")
-            term.setCursorPos(math.floor(W / 2) - 1, 12)
-            local pin2 = read("*")
+            -- Be om PIN
+            local pin1 = askPIN("Velg PIN-kode:")
+            local pin2 = askPIN("Gjenta PIN-koden:")
 
             if pin1 ~= pin2 then
                 showMessage({"PIN-kodene er ikke like.", "Prøv igjen."})
@@ -302,13 +312,39 @@ while true do
                 local ok = serverReceive()
                 if ok then
                     showMessage({"Konto opprettet!", "", "Velkommen!"}, 2)
-                    data = {balance = 0, pin = pin1}
-                    runMenu(card, data)
+                    runMenu(card, {balance = 0, pin = pin1})
+                    return
                 else
                     showMessage({"Noe gikk galt.", "Prøv igjen."})
                 end
             end
+
+        elseif inButton(x, y, Y_EXIT_NEW) then
+            break
+        end
+    end
+end
+
+-- ─── HOVEDLOOP ────────────────────────────────────────────────────────────────
+
+while true do
+    clearScreen()
+    drawTitle()
+    writeCentered(10, "Sett inn bankkort (disk)...")
+
+    sleep(1)
+    local drive = getDrive()
+    local card  = getCard(drive)
+
+    if card then
+        rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
+        local data = serverReceive()
+
+        if not data then
+            -- Ukjent kort → nytt-kort-meny
+            runNewCardMenu(card, drive)
         else
+            -- Kjent kort → PIN-sjekk → normalmeny
             local pin = askPIN()
             if pin == data.pin then
                 runMenu(card, data)

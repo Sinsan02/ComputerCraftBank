@@ -63,6 +63,16 @@ while true do
             print("Avvist uttak (ikke nok penger): " .. msg.card)
             rednet.send(sender, false)
         end
+    elseif msg.type == "changepin" then
+        if not db[msg.card] then
+            rednet.send(sender, false)
+        else
+            db[msg.card].pin = msg.newpin
+            save(db)
+            print("PIN endret: " .. msg.card)
+            rednet.send(sender, true)
+        end
+
     elseif msg.type == "transfer" then
         if not db[msg.from] then
             rednet.send(sender, {ok=false, reason="Betalar sitt kort finst ikkje"})
