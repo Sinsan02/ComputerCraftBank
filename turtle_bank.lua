@@ -11,8 +11,14 @@ while true do
         local item = turtle.getItemDetail(1)
         if item and item.name == "minecraft:diamond" then
             count = turtle.getItemCount(1)
-            turtle.select(1)
-            turtle.dropDown()
+            -- Flytt fra innboks (slot 1) til reserve (slot 2-16)
+            for slot = 2, 16 do
+                if turtle.getItemCount(slot) == 0 then
+                    turtle.select(1)
+                    turtle.transferTo(slot, count)
+                    break
+                end
+            end
         end
         print("Mottok innskudd: " .. count .. " diamanter")
         rednet.send(sender, count)
