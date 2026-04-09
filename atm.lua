@@ -6,7 +6,7 @@ local SERVER_ID = 11       -- Computer ID til bank_server
 local TURTLE_ID = 2       -- Computer ID til turtle_bank
 local DIAMOND_VALUE = 1000
 
-rednet.open("right")
+rednet.open("top")
 
 -- Skjermstorrelse (standard CC: 51x19)
 local W, H = term.getSize()
