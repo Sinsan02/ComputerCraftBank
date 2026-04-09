@@ -1,3 +1,6 @@
+-- Blokker Ctrl+T slik at programmet ikkje kan avsluttast
+os.pullEvent = os.pullEventRaw
+
 -- KONFIGURASJON
 local SERVER_ID = 5       -- Computer ID til bank_server
 local TURTLE_ID = 2       -- Computer ID til turtle_bank
