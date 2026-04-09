@@ -104,6 +104,17 @@ local function serverReceive()
     return nil
 end
 
+local function turtleReceive()
+    local deadline = os.clock() + 5
+    while os.clock() < deadline do
+        local sender, msg = rednet.receive(1)
+        if sender == TURTLE_ID then
+            return msg
+        end
+    end
+    return nil
+end
+
 -- ─── KORT ─────────────────────────────────────────────────────────────────────
 
 local function getCard()
@@ -155,28 +166,26 @@ end
 -- ─── OPERASJONAR ──────────────────────────────────────────────────────────────
 
 local function deposit(card)
-    local chest = peripheral.find("inventory")
-    if not chest then
-        showMessage({"Ingen kiste koblet til!"})
-        return
-    end
+    -- Vis ventemelding mens turtle teller
+    clearScreen()
+    drawTitle()
+    local wait = "Teller diamanter i turtle..."
+    term.setBackgroundColor(COL_BG)
+    term.setTextColor(COL_TEXT)
+    term.setCursorPos(math.floor((W - #wait) / 2) + 1, 10)
+    term.write(wait)
 
-    local diamonds = 0
-    for slot, item in pairs(chest.list()) do
-        if item.name == "minecraft:diamond" then
-            diamonds = diamonds + item.count
-        end
+    rednet.send(TURTLE_ID, {type = "deposit"})
+    local diamonds = turtleReceive()
+
+    if not diamonds or type(diamonds) ~= "number" then
+        showMessage({"Ingen respons fra turtle!"})
+        return
     end
 
     if diamonds == 0 then
-        showMessage({"Ingen diamanter i kisten!"})
+        showMessage({"Ingen diamanter i turtle!"})
         return
-    end
-
-    for slot, item in pairs(chest.list()) do
-        if item.name == "minecraft:diamond" then
-            chest.pushItems(peripheral.getName(chest), slot, item.count)
-        end
     end
 
     local money = diamonds * DIAMOND_VALUE

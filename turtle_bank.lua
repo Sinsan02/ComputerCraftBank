@@ -3,17 +3,29 @@ rednet.open("back")
 print("Turtle-bank klar (ID: " .. os.getComputerID() .. ")")
 
 while true do
-    local _, msg = rednet.receive()
+    local sender, msg = rednet.receive()
 
-    if type(msg) == "table" and msg.type == "give" then
+    if type(msg) == "table" and msg.type == "deposit" then
+        -- Kun slot 1 er innskudd-innboks, resten er uttaks-reserve
+        local count = 0
+        local item = turtle.getItemDetail(1)
+        if item and item.name == "minecraft:diamond" then
+            count = turtle.getItemCount(1)
+            turtle.select(1)
+            turtle.dropDown()
+        end
+        print("Mottok innskudd: " .. count .. " diamanter")
+        rednet.send(sender, count)
+
+    elseif type(msg) == "table" and msg.type == "give" then
         local amount = math.floor(msg.amount)
         print("Gir ut " .. amount .. " diamanter...")
 
         local given = 0
         for i = 1, amount do
-            -- Finn en slot med diamanter
+            -- Bruk kun slot 2-16 for uttak (slot 1 er innboks)
             local dropped = false
-            for slot = 1, 16 do
+            for slot = 2, 16 do
                 if turtle.getItemCount(slot) > 0 then
                     turtle.select(slot)
                     if turtle.drop(1) then
