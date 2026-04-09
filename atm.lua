@@ -1,12 +1,12 @@
--- Blokker Ctrl+T slik at programmet ikkje kan avsluttast
+-- Blokker Ctrl+T slik at programmet ikke kan avsluttes
 os.pullEvent = os.pullEventRaw
 
 -- KONFIGURASJON
-local SERVER_ID = 5       -- Computer ID til bank_server
+local SERVER_ID = 11       -- Computer ID til bank_server
 local TURTLE_ID = 2       -- Computer ID til turtle_bank
 local DIAMOND_VALUE = 1000
 
-rednet.open("back")
+rednet.open("right")
 
 -- Skjermstorrelse (standard CC: 51x19)
 local W, H = term.getSize()
@@ -42,7 +42,7 @@ end
 local function drawTitle()
     -- Tre-rads orange banner
     paintutils.drawFilledBox(1, 1, W, 3, COL_TITLE_BG)
-    -- "A T M" sentrert paa rad 2
+    -- "A T M" sentrert på rad 2
     local title = "A  T  M"
     local tx = math.floor((W - #title) / 2) + 1
     term.setBackgroundColor(COL_TITLE_BG)
@@ -66,11 +66,11 @@ end
 
 -- Tegner en knapp med skygge-effekt
 local function drawButton(y, text)
-    -- Skygge (brun, forskjovs 1 til hoyre og 1 ned)
+    -- Skygge (brun, forskjøvet 1 til høyre og 1 ned)
     paintutils.drawFilledBox(BTN_X + 1, y + 1, BTN_X + BTN_W, y + BTN_H, COL_SHADOW)
-    -- Hovudknapp (oransje)
+    -- Hovedknapp (oransje)
     paintutils.drawFilledBox(BTN_X, y, BTN_X + BTN_W - 1, y + BTN_H - 1, COL_BTN)
-    -- Tekst sentrert paa ovre rad av knappen
+    -- Tekst sentrert på øvre rad av knappen
     local tx = BTN_X + math.floor((BTN_W - #text) / 2)
     term.setBackgroundColor(COL_BTN)
     term.setTextColor(COL_BTN_TXT)
@@ -80,7 +80,7 @@ local function drawButton(y, text)
     term.setTextColor(COL_TEXT)
 end
 
--- Sjekk om klikk traff ein knapp
+-- Sjekk om klikk traff en knapp
 local function inButton(cx, cy, btnY)
     return cy >= btnY and cy <= btnY + BTN_H - 1
        and cx >= BTN_X and cx <= BTN_X + BTN_W - 1
@@ -195,7 +195,7 @@ local function deposit(card)
 end
 
 local function withdraw(card)
-    local diamonds = askNumber("Antall diamanter aa ta ut:")
+    local diamonds = askNumber("Antall diamanter å ta ut:")
 
     if not diamonds or diamonds <= 0 or math.floor(diamonds) ~= diamonds then
         showMessage({"Ugyldig antall!"})
@@ -242,7 +242,7 @@ local function runMenu(card, data)
             break
         end
 
-        -- Oppdater saldo fraa serveren
+        -- Oppdater saldo fra serveren
         rednet.send(SERVER_ID, {type = "get", card = tostring(card)})
         data = serverReceive()
         if not data then break end
@@ -277,7 +277,7 @@ while true do
             term.write("Nytt kort oppdaget!")
 
             term.setCursorPos(math.floor(W / 2) - 8, 8)
-            term.write("Velg ein PIN-kode:")
+            term.write("Velg en PIN-kode:")
             term.setCursorPos(math.floor(W / 2) - 1, 9)
             local pin1 = read("*")
 
@@ -287,16 +287,16 @@ while true do
             local pin2 = read("*")
 
             if pin1 ~= pin2 then
-                showMessage({"PIN-kodene er ikkje like.", "Prøv igjen."})
+                showMessage({"PIN-kodene er ikke like.", "Prøv igjen."})
             else
                 rednet.send(SERVER_ID, {type = "create", card = tostring(card), pin = pin1})
                 local ok = serverReceive()
                 if ok then
-                    showMessage({"Konto oppretta!", "", "Velkommen!"}, 2)
+                    showMessage({"Konto opprettet!", "", "Velkommen!"}, 2)
                     data = {balance = 0, pin = pin1}
                     runMenu(card, data)
                 else
-                    showMessage({"Noko gjekk gale.", "Prøv igjen."})
+                    showMessage({"Noe gikk galt.", "Prøv igjen."})
                 end
             end
         else
@@ -308,6 +308,6 @@ while true do
             end
         end
     else
-        sleep(0.5) -- unngaa CPU-spinn
+        sleep(0.5) -- unngå CPU-spinn
     end
 end
