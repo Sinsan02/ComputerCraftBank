@@ -3,7 +3,7 @@ local base = "https://raw.githubusercontent.com/Sinsan02/ComputerCraftBank/main/
 local files = {
     "bank_server",
     "atm",
-    "turtle_bank"
+    "turtle_bank",
     "betaling"
 }
 
