@@ -40,6 +40,14 @@ local function drawTitle()
     term.setTextColor(COL_TEXT)
 end
 
+-- Vent på Enter-tasten, ignorer all annen input
+local function ventPaaEnter()
+    while true do
+        local _, key = os.pullEvent("key")
+        if key == keys.enter then break end
+    end
+end
+
 -- Skriv ei sentrert linje paa gjeven rad
 local function writeCentered(y, text, color)
     term.setBackgroundColor(COL_BG)
@@ -118,17 +126,17 @@ while true do
     clearScreen()
     drawTitle()
 
-    writeCentered(5,  "Sett inn begge korta:", COL_ACCENT)
+    writeCentered(5,  "Sett inn begge kortene:", COL_ACCENT)
     drawDivider(6)
     writeCentered(8,  "[ VENSTRE SIDE ]", COL_TEXT)
-    writeCentered(9,  "Betalar sitt kort", COL_DIM)
+    writeCentered(9,  "Betaler sitt kort", COL_DIM)
     drawDivider(11)
-    writeCentered(13, "[ HOGRE SIDE ]", COL_TEXT)
-    writeCentered(14, "Mottakar sitt kort", COL_DIM)
+    writeCentered(13, "[ HØYRE SIDE ]", COL_TEXT)
+    writeCentered(14, "Mottaker sitt kort", COL_DIM)
     drawDivider(16)
-    writeCentered(17, "Trykk Enter naa begge er sett inn...", COL_DIM)
+    writeCentered(17, "Trykk Enter når begge er satt inn...", COL_DIM)
 
-    read()
+    ventPaaEnter()
 
     -- ── Valider kort ────────────────────────────────────────────────────────
     local leftDrive, rightDrive = getDrives()
@@ -136,11 +144,11 @@ while true do
     local toCard   = getCardID(rightDrive)
 
     if not fromCard then
-        showMessage({"Fann ikkje betalar sitt kort!", "", "(Venstre disk-stasjon)"}, COL_ERR)
+        showMessage({"Fant ikke betaler sitt kort!", "", "(Venstre disk-stasjon)"}, COL_ERR)
     elseif not toCard then
-        showMessage({"Fann ikkje mottakar sitt kort!", "", "(Hogre disk-stasjon)"}, COL_ERR)
+        showMessage({"Fant ikke mottaker sitt kort!", "", "(Høyre disk-stasjon)"}, COL_ERR)
     elseif tostring(fromCard) == tostring(toCard) then
-        showMessage({"Kan ikkje betale til same kort!"}, COL_ERR)
+        showMessage({"Kan ikke betale til samme kort!"}, COL_ERR)
     else
 
         -- ── Hent kontodata ───────────────────────────────────────────────────
@@ -151,16 +159,16 @@ while true do
         local toData = serverReceive()
 
         if not fromData then
-            showMessage({"Betalar sitt kort er ikkje registrert!"}, COL_ERR)
+            showMessage({"Betaler sitt kort er ikke registrert!"}, COL_ERR)
         elseif not toData then
-            showMessage({"Mottakar sitt kort er ikkje registrert!"}, COL_ERR)
+            showMessage({"Mottaker sitt kort er ikke registrert!"}, COL_ERR)
         else
 
             -- ── PIN-skjerm ───────────────────────────────────────────────────
             clearScreen()
             drawTitle()
 
-            writeCentered(5, "Betalar sin saldo:", COL_DIM)
+            writeCentered(5, "Betaler sin saldo:", COL_DIM)
             writeCentered(6, fromData.balance .. " kr", COL_ACCENT)
             drawDivider(8)
             writeCentered(10, "Skriv PIN-kode:", COL_TEXT)
@@ -175,31 +183,31 @@ while true do
                 clearScreen()
                 drawTitle()
 
-                writeCentered(5, "Betalar sin saldo:", COL_DIM)
+                writeCentered(5, "Betaler sin saldo:", COL_DIM)
                 writeCentered(6, fromData.balance .. " kr", COL_ACCENT)
                 drawDivider(8)
-                writeCentered(10, "Antall diamanter aa betale:", COL_TEXT)
+                writeCentered(10, "Antall diamanter å betale:", COL_TEXT)
 
                 local diamonds = tonumber(readCentered(10, 12))
 
                 if not diamonds or diamonds <= 0 or math.floor(diamonds) ~= diamonds then
-                    showMessage({"Ugyldig antal diamanter!"}, COL_ERR)
+                    showMessage({"Ugyldig antall diamanter!"}, COL_ERR)
                 else
                     local amount = diamonds * DIAMOND_VALUE
 
                     if amount > fromData.balance then
                         showMessage({
-                            "Ikkje nok pengar!",
+                            "Ikke nok penger!",
                             "",
                             "Saldo:    " .. fromData.balance .. " kr",
-                            "Krevst:   " .. amount .. " kr"
+                            "Kreves:   " .. amount .. " kr"
                         }, COL_ERR, 3)
                     else
 
-                        -- ── Utfor overfoering ────────────────────────────────
+                        -- ── Behandler overføring ─────────────────────────────
                         clearScreen()
                         drawTitle()
-                        writeCentered(10, "Behandlar betaling...", COL_DIM)
+                        writeCentered(10, "Behandler betaling...", COL_DIM)
 
                         rednet.send(SERVER_ID, {
                             type   = "transfer",
@@ -212,17 +220,17 @@ while true do
                         -- ── Resultat-skjerm ──────────────────────────────────
                         if res and res.ok then
                             showMessage({
-                                "Betaling gjennomfort!",
+                                "Betaling gjennomført!",
                                 "",
                                 diamonds .. " diamanter",
                                 "(" .. amount .. " kr)",
                                 "",
-                                "er overfort til mottakar."
+                                "er overført til mottaker."
                             }, COL_OK, 3)
                         else
-                            local reason = (res and res.reason) or "Ukjend feil"
+                            local reason = (res and res.reason) or "Ukjent feil"
                             showMessage({
-                                "Betaling feila!",
+                                "Betaling feilet!",
                                 "",
                                 reason
                             }, COL_ERR, 3)
